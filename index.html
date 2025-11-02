@@ -1,60 +1,56 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8"/>
-  <title>单文件音乐播放器</title>
-  <style>
-    body{margin:0;padding:40px;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif}
-    h2{margin-top:0}
-    audio{width:100%;outline:0}
-    #desc{margin-top:8px;font-size:14px;color:#000}
-    ul{list-style:none;padding:0;margin:20px 0}
-    li{padding:10px 12px;background:#222;margin:6px 0;border-radius:4px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
-    li:hover{background:#333}
-    li.playing{background:#005cbe}
-    li span.desc{font-size:13px;color:#aaa;margin-left:12px}
-  </style>
+<meta charset="UTF-8">
+<title>多音频独立播放器</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:40px;background:#fff;color:#222;font-family:Arial,Helvetica,sans-serif}
+  h2{margin-top:0}
+  .player-card{width:100%;max-width:600px;margin:0 auto 24px auto;border:1px solid #ddd;border-radius:6px;padding:12px 16px;background:#fafafa}
+  .player-card.playing{border-color:#005cbe;background:#f0f7ff}
+  audio{width:100%;outline:0}
+  .title{margin-top:8px;font-size:14px;color:#555}
+</style>
 </head>
 <body>
-  <h2>🎵 音乐列表</h2>
-  <audio id="ap" controls preload="metadata"></audio>
-  <div id="desc"></div>
 
-  <ul id="list"></ul>
+<h2 align="center">🎵 音频列表</h2>
+<div id="cards"></div>
 
-  <script>
-    const ap=document.getElementById('ap'),listBox=document.getElementById('list'),descBox=document.getElementById('desc');
-    let songs=[],idx=0;
+<script>
+(async ()=>{
+  const list = await fetch('files.json').then(r=>r.json()).catch(()=>[]);
+  if(!list.length){document.body.insertAdjacentHTML('beforeend','<p align="center">加载列表失败</p>');return;}
 
-    fetch('files.json')
-      .then(r=>r.json())
-      .then(d=>{
-        songs=d;
-        renderList();
-        if(songs.length){play(0);}
-      })
-      .catch(err=>listBox.textContent='加载列表失败，请确认 files.json 存在且格式正确。');
+  const cardsBox = document.getElementById('cards');
+  let currentAudio = null;          // 当前正在放的 audio 元素
+  let currentCard  = null;          // 当前高亮卡片
 
-    function renderList(){
-      listBox.innerHTML='';
-      songs.forEach((s,i)=>{
-        const li=document.createElement('li');
-        li.innerHTML=`${s.file}<span class="desc">${s.desc||''}</span>`;
-        li.onclick=()=>play(i);
-        listBox.appendChild(li);
-      });
-    }
-    function play(i){
-      idx=i;
-      const cur=songs[i];
-      ap.src=cur.file;
-      descBox.textContent=cur.desc||'';
-      document.querySelectorAll('li').forEach((el,k)=>el.classList.toggle('playing',k===i));
-      ap.play();
-    }
-    ap.addEventListener('ended',()=>{
-      if(idx<songs.length-1)play(idx+1);
+  list.forEach((item,i)=>{
+    const card = document.createElement('div');
+    card.className = 'player-card';
+    card.innerHTML = `
+      <audio src="${item.file}" controls preload="metadata"></audio>
+      <div class="title">${item.desc||''}</div>
+    `;
+
+    const audio = card.querySelector('audio');
+    audio.addEventListener('play', () => {
+      if(currentAudio && currentAudio !== audio){
+        currentAudio.pause();          // 先暂停上一个
+        currentCard.classList.remove('playing');
+      }
+      currentAudio = audio;
+      currentCard  = card;
+      card.classList.add('playing');
     });
-  </script>
+    audio.addEventListener('pause', () => card.classList.remove('playing'));
+    audio.addEventListener('ended', () => card.classList.remove('playing'));
+
+    cardsBox.appendChild(card);
+  });
+})();
+</script>
 </body>
 </html>
