@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <title>单文件音乐播放器</title>
+  <style>
+    body{margin:0;padding:40px;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif}
+    h2{margin-top:0}
+    audio{width:100%;outline:0}
+    #desc{margin-top:8px;font-size:14px;color:#000}
+    ul{list-style:none;padding:0;margin:20px 0}
+    li{padding:10px 12px;background:#222;margin:6px 0;border-radius:4px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+    li:hover{background:#333}
+    li.playing{background:#005cbe}
+    li span.desc{font-size:13px;color:#aaa;margin-left:12px}
+  </style>
+</head>
+<body>
+  <h2>🎵 音乐列表</h2>
+  <audio id="ap" controls preload="metadata"></audio>
+  <div id="desc"></div>
+
+  <ul id="list"></ul>
+
+  <script>
+    const ap=document.getElementById('ap'),listBox=document.getElementById('list'),descBox=document.getElementById('desc');
+    let songs=[],idx=0;
+
+    fetch('files.json')
+      .then(r=>r.json())
+      .then(d=>{
+        songs=d;
+        renderList();
+        if(songs.length){play(0);}
+      })
+      .catch(err=>listBox.textContent='加载列表失败，请确认 files.json 存在且格式正确。');
+
+    function renderList(){
+      listBox.innerHTML='';
+      songs.forEach((s,i)=>{
+        const li=document.createElement('li');
+        li.innerHTML=`${s.file}<span class="desc">${s.desc||''}</span>`;
+        li.onclick=()=>play(i);
+        listBox.appendChild(li);
+      });
+    }
+    function play(i){
+      idx=i;
+      const cur=songs[i];
+      ap.src=cur.file;
+      descBox.textContent=cur.desc||'';
+      document.querySelectorAll('li').forEach((el,k)=>el.classList.toggle('playing',k===i));
+      ap.play();
+    }
+    ap.addEventListener('ended',()=>{
+      if(idx<songs.length-1)play(idx+1);
+    });
+  </script>
+</body>
+</html>
